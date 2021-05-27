@@ -32,9 +32,6 @@ import {
 
 
 export class WiseUserSession extends UserSession {
-  constructor(options?: any) {
-    super(options);
-  }
   // @ts-ignore
   async generateAndStoreTransitKey() {
     const sessionData = await this.store.getSessionData();
@@ -231,8 +228,9 @@ export class WiseUserSession extends UserSession {
   async signUserOut() {
     await this.store.deleteSessionData();
   }
-  async generateAuthToken() {
+  async generateAuthURL() {
     const transitKey = await this.generateAndStoreTransitKey();
-    return this.makeAuthRequest(transitKey, undefined, this.appConfig.manifestURI(), this.appConfig.scopes, this.appConfig.appDomain);
+    const token = await this.makeAuthRequest(transitKey, this.appConfig.redirectURI(), this.appConfig.manifestURI(), this.appConfig.scopes, this.appConfig.appDomain);
+    return `https://wiseapp.id/download?token=${token}`;
   }
 }
