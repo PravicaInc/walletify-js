@@ -138,7 +138,6 @@ import {
 } from 'wise-js';
 
 export const useAuthentication = () => {
-  const [userData, setUserData] = useState<IUser | undefined>(undefined);
   const [pendingAuthentication, setPendingAuthentication] = useState<boolean>(false);
 
   const createSession = useCallback(async () => {
@@ -146,39 +145,65 @@ export const useAuthentication = () => {
     const signedIn = await userSession.isUserSignedIn();
     if (signedIn) {
       // Method to retrieve the user's profile data
-      const session = await userSession.loadUserData();
-      console.warn('Use is logged in with session data', session);
+      const sessionData = await userSession.loadUserData();
+      console.warn('Use is logged in with session data', sessionData);
     } else {
       console.warn('User is not logged In');
     }
   }, []);
-
+   const resumeAuthentication = useCallback(
+           (linkingUrl: string) => {
+              Linking.canOpenURL(linkingUrl)
+                      .then(supported => {
+                         if (supported) {
+                            setPendingAuth(true);
+                            const authResponse = getParameterByName('authResponse', linkingUrl);
+                            setLoading();
+                            userSession
+                                    .handlePendingSignIn(authResponse || '')
+                                    .then(() => {
+                                       createSession();
+                                       setPendingAuth(false);
+                                    })
+                                    .catch(() => {
+                                       setFailure();
+                                       setPendingAuth(false);
+                                    });
+                         }
+                      })
+                      .catch(() => {
+                         setFailure();
+                         setPendingAuth(false);
+                      });
+           },
+           [createSession],
+   );
   useEffect(() => {
     createSession();
-    const subscription = DeviceEventEmitter.addListener('url', (e: any) => {
+    // setup listener for url changes.
+    const subscription = DeviceEventEmitter.addListener('url', ({ url: linkingUrl }) => {
       if (e.url && !pendingAuthentication) {
-        setPendingAuthentication(true);
-        const authResponse = getParameterByName('authResponse', e.url);
-        // Method to determine if there is an incoming authentication response. If detected, the userSession.handlePendingSignIn method will process the response and provide a userData object containing the user's identity, BNS username and profile information.
-        // After WISE has processed your app's request, and the user has granted permission, the resulting response will be passed back to your app via deep link, more to come below.
-        userSession.handlePendingSignIn(authResponse).then(
-          async () => {
-            await createSession();
-            setPendingAuthentication(false);
-          },
-        );
+         resumeAuthentication(linkingUrl);
       }
     });
     return () => subscription.remove();
   }, []);
+  
+   useEffect(() => {
+      const getUrlAsync = async () => {
+         // Get the deep link used to open the app for first time
+         const initialUrl = await Linking.getInitialURL();
+         resumeAuthentication(initialUrl || '');
+      };
+
+      getUrlAsync();
+   }, []);
+   
   const signIn = useCallback(async () => {
     // Method to generate generate the authentication request payload.
-     const token = await userSession.generateAuthToken();
+     const url = await userSession.generateAuthURL();
     // This part where you communicate with WISE to authenticate.
-    Linking.openURL(`${Platform.OS === 'ios' ? 'wiseapp:/' : 'https://wiseapp.id/download'}/?token=${token}`)
-      .catch(() => {
-        Alert.alert('Attention!', 'It seems that you don\'t have WISE dApp already installed');
-      });
+     Linking.openURL(url);
   }, []);
   
   const signOut = useCallback(async () => {
@@ -188,21 +213,15 @@ export const useAuthentication = () => {
   return {
     signIn,
     signOut,
-    userData,
-    setUserData,
   };
 };
 ```
 6. Make a `manifest.json` file on your hosting domain.
 
-**Important Note**: Make sure that you change the `appURLScheme` to your app deepLinking URLScheme, `bundleID` to your IOS App Bundle ID and `packageName` to your Android App Package name.
 ```json5
 {
     short_name: "Pravica",
     name: "Pravica",
-    appURLScheme: "pravica",
-    bundleID: "io.pravica",
-    packageName: "io.pravica",
     icons: [
         {
             src: "https://app.pravica.io/new-logo.png",
@@ -217,10 +236,6 @@ export const useAuthentication = () => {
 }
 ```
 
-`bundleID` and `packageName` are used to connect your published app identifier with your domain, to avoid malicious apps to steal user's appPrivateKey.
-
-`appURLScheme` is used to redirect user back from WISE to your app with the authResponse.
-
 7. To initiate [Stacks Gaia](https://docs.stacks.co/build-apps/guides/data-storage) client with your app.
 ```javascript
 import {
@@ -232,3 +247,68 @@ export const wiseStorage = new WiseCustomStorage({
 });
 ```
 Gaia storage provides a way for users to save both public and private data off-chain while retaining complete control over it.
+
+8. To enable routing back to your app from WISE you have to configure the universal links for (IOS) and app links for (Android).
+
+Create a folder on your hosting domain root with the name `.well-known` to put the universal links for (IOS) and app links for (Android) configuration files.
+
+1- For IOS:
+- create a file with the name ‘apple-app-site-association’:
+```
+{
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appID": "MXLF5SQD6Q.io.pravica",
+                "paths": [ "*" ]
+            }
+        ]
+    }
+}
+```
+- Replace `MXLF5SQD6Q` with your `Team ID` you can get it from https://developer.apple.com.
+- Replace `io.pravica` with your `Bundle Identifier`.
+
+- Then Add the Associated Domains Entitlement to Your App.
+
+   To set up the entitlement in your app, open the target’s Signing & Capabilities tab in Xcode and add the Associated Domains capability and fill in the domain of your site with the prefix `applinks`:
+    
+    ![img.png](img.png)
+
+For Reference: https://developer.apple.com/documentation/Xcode/supporting-associated-domains.
+
+
+2- For Android:
+- create a file with the name `assetlinks.json`:
+```json5
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.pravica",
+    "sha256_cert_fingerprints": ["DB:1C:4B:5C:BA:2D:DD:6E:56:47:87:93:FA:D0:7E:BF:4B:15:DF:71:99:19:73:8E:3F:2F:54:F0:C8:8B:FC:C4"]
+  }
+}]
+```
+- Replace `io.pravica` with your `Bundle Identifier`.
+- Replace `sha256_cert_fingerprints` with your fingerprint. The SHA256 fingerprints of your app’s signing certificate. You can use the following command to generate the fingerprint via the Java keytool.
+```shell
+keytool -list -v -keystore my-release-key.keystore
+```
+- To enable link handling verification for your app, set android:autoVerify="true" in any one of the web URL intent filters in your app manifest that include the android.intent.action.VIEW intent action and android.intent.category.BROWSABLE intent category, as shown in the following manifest code snippet:
+```xml
+<activity ...>
+
+    <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="https" android:host="app.pravica.io"/>
+    </intent-filter>
+
+</activity>
+```
+- Replace `app.pravica.io` with your domain URL.
+
+For Reference: https://developer.android.com/training/app-links/verify-site-associations.
