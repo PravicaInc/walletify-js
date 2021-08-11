@@ -275,6 +275,19 @@ Create a folder on your hosting domain root with the name `.well-known` to put t
    To set up the entitlement in your app, open the target’s Signing & Capabilities tab in Xcode and add the Associated Domains capability and fill in the domain of your site with the prefix `applinks`:
     
     ![img.png](img.png)
+-Add this code to your AppDelegate.m:
+  ```
+  #import "RCTLinkingManager.h"
+
+  - (BOOL)application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity
+    restorationHandler:(void (^)(NSArray * _Nullable))restorationHandler
+    {
+    return [RCTLinkingManager application:application
+                     continueUserActivity:userActivity
+                       restorationHandler:restorationHandler];
+    }
+  
+  ```
 
 For Reference: https://developer.apple.com/documentation/Xcode/supporting-associated-domains.
 
