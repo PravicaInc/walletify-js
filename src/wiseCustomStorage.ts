@@ -12,6 +12,7 @@ import {
   BLOCKSTACK_DEFAULT_GAIA_HUB_URL,
   megabytesToBytes,
   GaiaHubError,
+  fetchPrivate,
 } from '@stacks/common';
 
 import {
@@ -19,6 +20,7 @@ import {
   getPublicKeyFromPrivate,
   signECDSA,
 } from '@stacks/encryption';
+import {getBlockstackErrorFromResponse} from "@stacks/storage/src/hub";
 
 const SIGNATURE_FILE_SUFFIX = '.sig';
 export class WiseCustomStorage extends Storage {
@@ -222,6 +224,41 @@ export class WiseCustomStorage extends Storage {
     await this.userSession.store.setSessionData(sessionData);
 
     return gaiaConfig;
+  }
+  async getFileContents(
+      path: string,
+      app: string,
+      username: string | undefined,
+      zoneFileLookupURL: string | undefined,
+      forceText: boolean
+  ): Promise<string | ArrayBuffer | null> {
+    const opts = { app, username, zoneFileLookupURL };
+    const readUrl = await this.getFileUrl(path, opts);
+    const response = await fetchPrivate(readUrl);
+    if (!response.ok) {
+      throw await getBlockstackErrorFromResponse(response, `getFile ${path} failed.`, null);
+    }
+    let contentType = response.headers.get('Content-Type');
+    if (typeof contentType === 'string') {
+      contentType = contentType.toLowerCase();
+    }
+
+    const etag = response.headers.get('ETag');
+    if (etag) {
+      const sessionData = await this.userSession.store.getSessionData();
+      sessionData.etags![path] = etag;
+      await this.userSession.store.setSessionData(sessionData);
+    }
+    if (
+        forceText ||
+        contentType === null ||
+        contentType.startsWith('text') ||
+        contentType.startsWith('application/json')
+    ) {
+      return response.text();
+    } else {
+      return response.arrayBuffer();
+    }
   }
 }
 function isRecoverableGaiaError(error: GaiaHubError): boolean {
