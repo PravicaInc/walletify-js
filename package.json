@@ -1,6 +1,6 @@
 {
   "name": "wise-js",
-  "version": "1.0.0-beta.7",
+  "version": "1.0.0-beta.9",
   "description": "JS library for dApps to authenticate with WISE",
   "keywords": [
     "WISE",
@@ -37,9 +37,10 @@
   "homepage": "https://github.com/Pravica-Inc/wise-auth-js#readme",
   "dependencies": {
     "@stacks/auth": "2.0.0-beta.0",
-    "@stacks/storage": "2.0.0-beta.0",
+    "@stacks/common": "2.0.0-beta.0",
     "@stacks/encryption": "^2.0.0-beta.0",
-    "@stacks/common": "2.0.0-beta.0"
+    "@stacks/storage": "2.0.0-beta.0",
+    "@stacks/transactions": "^3.1.0"
   },
   "devDependencies": {
     "rimraf": "^3.0.2",

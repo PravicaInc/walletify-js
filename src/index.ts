@@ -1,6 +1,7 @@
 export * from './wiseCustomStorage';
 export * from './wiseUserSession';
 export * from '@stacks/auth';
+export * from '@stacks/transactions';
 export {SessionData,SessionOptions} from '@stacks/auth/dist/sessionData.js';
 export {SessionDataStore} from '@stacks/auth/dist/sessionStore.js';
 

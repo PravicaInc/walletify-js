@@ -18,6 +18,8 @@ import {
 } from '@stacks/network';
 import {
   decodeToken,
+  SECP256K1Client,
+  TokenSigner,
 } from 'jsontokens';
 import {
   hexStringToECPair,
@@ -29,6 +31,14 @@ import {
 import {
   extractProfile,
 } from '@stacks/profile';
+import {
+  ContractCallOptions, ContractCallPayload, ContractDeployOptions, ContractDeployPayload,
+  STXTransferOptions,
+  STXTransferPayload,
+  TransactionPayload,
+  TransactionTypes
+} from './types';
+import {PostCondition, serializeCV, serializePostCondition} from "@stacks/transactions";
 
 
 export class WiseUserSession extends UserSession {
@@ -233,4 +243,83 @@ export class WiseUserSession extends UserSession {
     const token = await this.makeAuthRequest(transitKey, this.appConfig.redirectURI(), this.appConfig.manifestURI(), this.appConfig.scopes, this.appConfig.appDomain);
     return `https://wiseapp.id/download?token=${token}`;
   }
+  async makeSTXTransferURL (options: STXTransferOptions) {
+    const { amount, userSession,appDetails, ..._options } = options;
+    const {appPrivateKey} = await this.loadUserData();
+    const publicKey = SECP256K1Client.derivePublicKey(appPrivateKey);
+
+    const payload: STXTransferPayload & {redirect_uri: string} = {
+      ..._options,
+      amount: amount.toString(10),
+      publicKey,
+      txType: TransactionTypes.STXTransfer,
+      redirect_uri: this.appConfig.redirectURI()
+    };
+    if (appDetails) {
+      payload.appDetails = appDetails;
+    }
+
+    const token = await signPayload(payload, appPrivateKey);
+    return `https://wiseapp.id/download?request=${token}`;
+  };
+  async makeContractCallURL (options: ContractCallOptions) {
+    const { functionArgs, appDetails, userSession, ..._options } = options;
+    const {appPrivateKey} = await this.loadUserData();
+    const publicKey = SECP256K1Client.derivePublicKey(appPrivateKey);
+
+    const args: string[] = functionArgs.map(arg => {
+      if (typeof arg === 'string') {
+        return arg;
+      }
+      return serializeCV(arg).toString('hex');
+    });
+
+    const payload: ContractCallPayload & {redirect_uri: string} = {
+      ..._options,
+      functionArgs: args,
+      txType: TransactionTypes.ContractCall,
+      publicKey,
+      redirect_uri: this.appConfig.redirectURI()
+    };
+
+    if (appDetails) {
+      payload.appDetails = appDetails;
+    }
+    const token = await signPayload(payload, appPrivateKey);
+    return `https://wiseapp.id/download?request=${token}`;
+  };
+
+  async makeContractDeployURL (options: ContractDeployOptions) {
+    const { appDetails, userSession, ..._options } = options;
+    const {appPrivateKey} = await this.loadUserData();
+    const publicKey = SECP256K1Client.derivePublicKey(appPrivateKey);
+
+    const payload: ContractDeployPayload & {redirect_uri: string} = {
+      ..._options,
+      publicKey,
+      txType: TransactionTypes.ContractDeploy,
+      redirect_uri: this.appConfig.redirectURI()
+    };
+
+    if (appDetails) {
+      payload.appDetails = appDetails;
+    }
+
+    const token = await signPayload(payload, appPrivateKey);
+    return `https://wiseapp.id/download?request=${token}`;
+  };
 }
+
+export const signPayload = async (payload: TransactionPayload, privateKey: string) => {
+  let { postConditions } = payload;
+  if (postConditions && typeof postConditions[0] !== 'string') {
+    postConditions = (postConditions as PostCondition[]).map(pc =>
+        serializePostCondition(pc).toString('hex')
+    );
+  }
+  const tokenSigner = new TokenSigner('ES256k', privateKey);
+  return tokenSigner.signAsync({
+    ...payload,
+    postConditions,
+  } as any);
+};
