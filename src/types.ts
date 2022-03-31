@@ -19,6 +19,7 @@ export interface TxBase {
     network?: StacksNetwork;
     anchorMode?: AnchorMode;
     attachment?: string;
+    metadata?: object;
     fee?: number | string;
     /**
      * Provide the Hiro Wallet with a suggested account to sign this transaction with.

@@ -1,6 +1,6 @@
 {
   "name": "wise-js",
-  "version": "1.0.0-beta.9",
+  "version": "1.0.0",
   "description": "JS library for dApps to authenticate with WISE",
   "keywords": [
     "WISE",

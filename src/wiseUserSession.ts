@@ -238,9 +238,9 @@ export class WiseUserSession extends UserSession {
   async signUserOut() {
     await this.store.deleteSessionData();
   }
-  async generateAuthURL() {
+  async generateAuthURL(extraData?: object) {
     const transitKey = await this.generateAndStoreTransitKey();
-    const token = await this.makeAuthRequest(transitKey, this.appConfig.redirectURI(), this.appConfig.manifestURI(), this.appConfig.scopes, this.appConfig.appDomain);
+    const token = await this.makeAuthRequest(transitKey, this.appConfig.redirectURI(), this.appConfig.manifestURI(), this.appConfig.scopes, this.appConfig.appDomain, undefined, extraData);
     return `https://wiseapp.id/download?token=${token}`;
   }
   async makeSTXTransferURL (options: STXTransferOptions) {
