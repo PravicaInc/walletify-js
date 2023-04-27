@@ -1,3 +1,5 @@
+# wise-js was renamed to walletify-js on April 2023
+
 # wise-js
 
 Construct and decode authentication requests for Stacks apps.
