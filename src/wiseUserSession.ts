@@ -32,7 +32,12 @@ import {
   extractProfile,
 } from '@stacks/profile';
 import {
-  ContractCallOptions, ContractCallPayload, ContractDeployOptions, ContractDeployPayload,
+  ContractCallOptions,
+  ContractCallPayload,
+  ContractDeployOptions,
+  ContractDeployPayload,
+  SignaturePayload,
+  SignatureRequestOptions,
   STXTransferOptions,
   STXTransferPayload,
   TransactionPayload,
@@ -259,6 +264,22 @@ export class WiseUserSession extends UserSession {
       payload.appDetails = appDetails;
     }
 
+    const token = await signPayload(payload, appPrivateKey);
+    return `https://wiseapp.id/download?request=${token}`;
+  };
+  async makeSignMessageURL (options: SignatureRequestOptions) {
+    const {  appDetails, userSession, ..._options } = options;
+    const {appPrivateKey} = await this.loadUserData();
+    const publicKey = SECP256K1Client.derivePublicKey(appPrivateKey);
+
+    const payload: SignaturePayload = {
+      ..._options,
+      publicKey,
+    };
+
+    if (appDetails) {
+      payload.appDetails = appDetails;
+    }
     const token = await signPayload(payload, appPrivateKey);
     return `https://wiseapp.id/download?request=${token}`;
   };
