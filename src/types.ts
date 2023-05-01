@@ -52,6 +52,7 @@ export enum TransactionTypes {
     ContractCall = 'contract_call',
     ContractDeploy = 'smart_contract',
     STXTransfer = 'token_transfer',
+    SignMessage = 'sign_message',
 }
 
 /**
@@ -225,6 +226,7 @@ export interface CommonSignaturePayload {
     appDetails?: AuthOptions['appDetails'];
     network?: StacksNetwork;
     postConditions?: null;
+    txType: TransactionTypes;
 }
 export interface CommonSignatureRequestOptions {
     appDetails?: AuthOptions['appDetails'];

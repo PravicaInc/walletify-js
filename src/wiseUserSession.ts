@@ -272,9 +272,11 @@ export class WiseUserSession extends UserSession {
     const {appPrivateKey} = await this.loadUserData();
     const publicKey = SECP256K1Client.derivePublicKey(appPrivateKey);
 
-    const payload: SignaturePayload = {
+    const payload: SignaturePayload & {redirect_uri: string} = {
       ..._options,
       publicKey,
+      txType: TransactionTypes.SignMessage,
+      redirect_uri: this.appConfig.redirectURI()
     };
 
     if (appDetails) {
