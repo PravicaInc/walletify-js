@@ -32,7 +32,12 @@ import {
   extractProfile,
 } from '@stacks/profile';
 import {
-  ContractCallOptions, ContractCallPayload, ContractDeployOptions, ContractDeployPayload,
+  ContractCallOptions,
+  ContractCallPayload,
+  ContractDeployOptions,
+  ContractDeployPayload,
+  SignaturePayload,
+  SignatureRequestOptions,
   STXTransferOptions,
   STXTransferPayload,
   TransactionPayload,
@@ -241,7 +246,7 @@ export class WiseUserSession extends UserSession {
   async generateAuthURL(extraData?: object) {
     const transitKey = await this.generateAndStoreTransitKey();
     const token = await this.makeAuthRequest(transitKey, this.appConfig.redirectURI(), this.appConfig.manifestURI(), this.appConfig.scopes, this.appConfig.appDomain, undefined, extraData);
-    return `https://wiseapp.id/download?token=${token}`;
+    return `https://app.walletify.net/download?token=${token}`;
   }
   async makeSTXTransferURL (options: STXTransferOptions) {
     const { amount, userSession,appDetails, ..._options } = options;
@@ -260,7 +265,25 @@ export class WiseUserSession extends UserSession {
     }
 
     const token = await signPayload(payload, appPrivateKey);
-    return `https://wiseapp.id/download?request=${token}`;
+    return `https://app.walletify.net/download?request=${token}`;
+  };
+  async makeSignMessageURL (options: SignatureRequestOptions) {
+    const {  appDetails, userSession, ..._options } = options;
+    const {appPrivateKey} = await this.loadUserData();
+    const publicKey = SECP256K1Client.derivePublicKey(appPrivateKey);
+
+    const payload: SignaturePayload & {redirect_uri: string} = {
+      ..._options,
+      publicKey,
+      txType: TransactionTypes.SignMessage,
+      redirect_uri: this.appConfig.redirectURI()
+    };
+
+    if (appDetails) {
+      payload.appDetails = appDetails;
+    }
+    const token = await signPayload(payload, appPrivateKey);
+    return `https://app.walletify.net/download?request=${token}`;
   };
   async makeContractCallURL (options: ContractCallOptions) {
     const { functionArgs, appDetails, userSession, ..._options } = options;
@@ -286,7 +309,7 @@ export class WiseUserSession extends UserSession {
       payload.appDetails = appDetails;
     }
     const token = await signPayload(payload, appPrivateKey);
-    return `https://wiseapp.id/download?request=${token}`;
+    return `https://app.walletify.net/download?request=${token}`;
   };
 
   async makeContractDeployURL (options: ContractDeployOptions) {
@@ -306,7 +329,7 @@ export class WiseUserSession extends UserSession {
     }
 
     const token = await signPayload(payload, appPrivateKey);
-    return `https://wiseapp.id/download?request=${token}`;
+    return `https://app.walletify.net/download?request=${token}`;
   };
 }
 
