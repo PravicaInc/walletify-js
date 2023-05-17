@@ -1,13 +1,13 @@
-# wise-js was renamed to walletify-js on April 2023
+# Note: wise-js was renamed to walletify-js on April 2023
 
 # wise-js
 
 Construct and decode authentication requests for Stacks apps.
 
-This package provides the auth logic used by the [WISE App](https://wiseapp.id). If you're looking to integrate WISE authentication into your react-native app, wise-js provides a simple API using Stacks.
+This package provides the auth logic used by the [Walletify App](https://walletify.net/). If you're looking to integrate WISE authentication into your react-native app, wise-js provides a simple API using Stacks.
 if you're not familiar with Stacks, You should first take a look into [Stacks Authentication](https://docs.stacks.co/build-apps/guides/authentication). 
 
-![Wise](https://wiseapp.id/images/logo.png)
+![Walletify_logo](walletify_logo_1.png)
 
 ## Installation
 
